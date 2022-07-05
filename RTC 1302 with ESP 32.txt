@@ -1,0 +1,89 @@
+#include <ThreeWire.h>  //LIBRARY USED
+#include <RtcDS1302.h>   //library used
+
+ThreeWire myWire(21,22,17); // IO, SCLK, CE (connection)
+RtcDS1302<ThreeWire> Rtc(myWire);
+
+void setup () 
+{
+    Serial.begin(57600);         // 
+    Serial.print("compiled: ");
+    Serial.print(__DATE__);      //System time
+    Serial.println(__TIME__);    //System date
+
+    Rtc.Begin();
+
+    RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);    
+    printDateTime(compiled);   //Function introduced printDateTime name which is equate with system date time
+    Serial.println();
+
+    if (!Rtc.IsDateTimeValid())  // Common Causes:  1) first time you ran and the device wasn't running yet  0r 2) the battery on the device is low or even missing
+
+    {
+       
+        Serial.println("RTC lost confidence in the DateTime!");
+        Rtc.SetDateTime(compiled);   
+    }
+
+    if (Rtc.GetIsWriteProtected())      //It will enable write operation of RTC
+    {
+        Serial.println("RTC was write protected, enabling writing now");
+        Rtc.SetIsWriteProtected(false);
+    }
+
+    if (!Rtc.GetIsRunning())   //if RTC was not running then initialise this function
+    {
+        Serial.println("RTC was not actively running, starting now");
+        Rtc.SetIsRunning(true);      /
+    }
+
+    RtcDateTime now = Rtc.GetDateTime();                  // Now is non formated time variable
+    if (now < compiled)                                     // if Now time is less than system time
+    {
+        Serial.println("RTC is older than compile time!  (Updating DateTime)");
+        Rtc.SetDateTime(compiled);
+    }
+    else if (now > compiled)      //If now time is greater than system (compiled time)
+    {
+        Serial.println("RTC is newer than compile time. (this is expected)");
+    }
+    else if (now == compiled)     //This statement will run everytime once, when the time is correct
+    {
+        Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+    }
+}
+
+void loop () 
+{
+    RtcDateTime now = Rtc.GetDateTime();    
+
+    printDateTime(now);    //This line call the function name "printDateTime", which is defined below, Now variable will ove to that function which is
+                             //  nonformated and make inside the function into formaated time form
+    Serial.println();
+
+    if (!now.IsValid())          //If now vraible is not valid, mean the battery on the device is low or even missing and the power line was disconnected
+    {
+    
+        Serial.println("RTC lost confidence in the DateTime!");
+    }
+
+    delay(10000); // ten seconds    //Introduce the delay of 10 seconds
+}
+
+#define countof(a) (sizeof(a) / sizeof(a[0]))
+
+void printDateTime(const RtcDateTime& dt)     // This is function name printDateTime In this function nonformated form of time come at  RtcDateTime
+{
+    char datestring[20];
+
+    snprintf_P(datestring, 
+            countof(datestring),
+            PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
+            dt.Month(),
+            dt.Day(),
+            dt.Year(),
+            dt.Hour(),
+            dt.Minute(),
+            dt.Second() );  // These above lines make the non formated time into formated like month,day, year,hour,minute and seconds
+    Serial.print(datestring);   //Return the time in formated form
+}
